@@ -328,7 +328,7 @@ int main(int argc, char* argv[])
   // check for user error
   for(int ls=0; ls<OutputData::MAXLS; ls++)
     if(iod.output.levelset[ls] == OutputData::ON && ls>=(int)Phi.size()) {
-      print_error("*** Error: Cannot output level set %d, which is undefined.\n"); exit_mpi();}
+      print_error("*** Error: Cannot output level set %d, which is undefined.\n", ls); exit_mpi();}
 
 
   // Create gravity handler if specified by user

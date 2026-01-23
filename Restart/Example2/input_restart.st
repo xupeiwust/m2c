@@ -241,7 +241,7 @@ under Output {
   Velocity = On;
   LevelSet0 = On;
   MaterialID = On;
-  LaserRadiance = On;
+  //LaserRadiance = On;
   Temperature = On;
   Pressure = On;
   Density = On;
