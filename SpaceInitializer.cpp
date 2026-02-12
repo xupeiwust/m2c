@@ -364,6 +364,16 @@ SpaceInitializer::InitializeVandID(SpaceVariable3D &V, SpaceVariable3D &ID,
         for(int j=j0; j<jmax; j++)
           for(int i=i0; i<imax; i++) {
             if(distCal.Calculate(coords[k][j][i])>0) {
+
+              bool occluded = false;
+              for(int surf=0; surf<(int)color.size(); surf++)
+                if(color[surf][k][j][i] == 0) {//occluded
+                  occluded = true;
+                  break;
+                }
+              if(occluded)
+                continue; //do not override occluded nodes.
+
               v[k][j][i][0] = it->second->initialConditions.density;
               v[k][j][i][1] = it->second->initialConditions.velocity_x;
               v[k][j][i][2] = it->second->initialConditions.velocity_y;

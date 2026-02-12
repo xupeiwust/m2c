@@ -37,6 +37,9 @@ protected:
   vector<LevelSetOperator*>& lso;
   MultiPhaseOperator& mpo;  
 
+  //! mass/momentum/energy loss due to interface (reserved to be added back)
+  //SpaceVariable3D Wres;
+
   //! Laser absorption solver (NULL if laser is not activated)
   LaserAbsorptionSolver* laser;
 
