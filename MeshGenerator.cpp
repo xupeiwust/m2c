@@ -4,6 +4,7 @@
  ************************************************************************/
 
 #include <MeshGenerator.h>
+#include <climits>
 using std::pair;
 using std::vector;
 
@@ -144,6 +145,11 @@ void MeshGenerator::ComputeMeshCoordinatesAndDeltas(MeshData &iod_mesh,
   print("  Z-Direction: [%e, %e], %d nodes/cells, dz_min = %e, dz_max = %e.\n", z0, zmax, z.size(), 
          *std::min_element(dz.begin(), dz.end()), *std::max_element(dz.begin(), dz.end()));
   print("  Total number of nodes/cells: %lld.\n", (long long)x.size()*y.size()*z.size());
+
+  if((long long)x.size()*y.size()*z.size() > INT_MAX) {
+    print_error("*** Error: Number of nodes is too large for 32-bit integer indices. Coarsen the mesh.\n");
+    exit_mpi();
+  }
 
   if(iod_mesh.type == MeshData::CYLINDRICAL) 
     print("  Imposing cylindrical symmetry: x ~ axial coordinate, y ~ radial coordinate.\n");
