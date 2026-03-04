@@ -545,121 +545,121 @@ IntegrationOutput::WriteIntegrationResults(double time, double dt, int time_step
       continue;
 
     if(file[IntegrationData::VOLUME]) {
-      print(file[IntegrationData::VOLUME], "%10d    %16.8e    ", time_step, time);
+      print(file[IntegrationData::VOLUME], "%10d    %16.14e    ", time_step, time);
       double volume[numMaterials];
       double sum = 0.0;
       IntegrateVolume(index, tag, coords, dxyz, cell, id, volume);
       for(int i=0; i<numMaterials; i++) {
-        print(file[IntegrationData::VOLUME], "%16.8e  ", volume[i]);
+        print(file[IntegrationData::VOLUME], "%16.14e  ", volume[i]);
         sum += volume[i];
       } 
-      print(file[IntegrationData::VOLUME], "%16.8e\n", sum);
+      print(file[IntegrationData::VOLUME], "%16.14e\n", sum);
       print_flush(file[IntegrationData::VOLUME]);
     }
 
     if(file[IntegrationData::MASS]) {
-      print(file[IntegrationData::MASS], "%10d    %16.8e    ", time_step, time);
+      print(file[IntegrationData::MASS], "%10d    %16.14e    ", time_step, time);
       double mass[numMaterials];
       double sum = 0.0;
       IntegrateMass(index, tag, coords, dxyz, cell, v, id, mass);
       for(int i=0; i<numMaterials; i++) {
-        print(file[IntegrationData::MASS], "%16.8e  ", mass[i]);
+        print(file[IntegrationData::MASS], "%16.14e  ", mass[i]);
         sum += mass[i];
       }
-      print(file[IntegrationData::MASS], "%16.8e\n", sum);
+      print(file[IntegrationData::MASS], "%16.14e\n", sum);
       print_flush(file[IntegrationData::MASS]);
     } 
 
     if(file[IntegrationData::MOMENTUM]) {
-      print(file[IntegrationData::MOMENTUM], "%10d    %16.8e    ", time_step, time);
+      print(file[IntegrationData::MOMENTUM], "%10d    %16.14e    ", time_step, time);
       Vec3D momentum[numMaterials];
       Vec3D sum = 0.0;
       IntegrateMomentum(index, tag, coords, dxyz, cell, v, id, momentum);
       for(int i=0; i<numMaterials; i++) {
-        print(file[IntegrationData::MOMENTUM], "%16.8e  %16.8e  %16.8e  ",
+        print(file[IntegrationData::MOMENTUM], "%16.14e  %16.14e  %16.14e  ",
               momentum[i][0], momentum[i][1], momentum[i][2]);
         sum += momentum[i];
       }
-      print(file[IntegrationData::MOMENTUM], "%16.8e  %16.8e  %16.8e\n", sum[0], sum[1], sum[2]);
+      print(file[IntegrationData::MOMENTUM], "%16.14e  %16.14e  %16.14e\n", sum[0], sum[1], sum[2]);
       print_flush(file[IntegrationData::MOMENTUM]);
     } 
 
     if(file[IntegrationData::TOTAL_ENERGY]) {
-      print(file[IntegrationData::TOTAL_ENERGY], "%10d    %16.8e    ", time_step, time);
+      print(file[IntegrationData::TOTAL_ENERGY], "%10d    %16.14e    ", time_step, time);
       double E[numMaterials];
       double sum = 0.0;
       IntegrateTotalEnergy(index, tag, coords, dxyz, cell, v, id, E);
       for(int i=0; i<numMaterials; i++) {
-        print(file[IntegrationData::TOTAL_ENERGY], "%16.8e  ", E[i]);
+        print(file[IntegrationData::TOTAL_ENERGY], "%16.14e  ", E[i]);
         sum += E[i];
       }
-      print(file[IntegrationData::TOTAL_ENERGY], "%16.8e\n", sum);
+      print(file[IntegrationData::TOTAL_ENERGY], "%16.14e\n", sum);
       print_flush(file[IntegrationData::TOTAL_ENERGY]);
     }
 
     if(file[IntegrationData::TOTAL_ENTHALPY]) {
-      print(file[IntegrationData::TOTAL_ENTHALPY], "%10d    %16.8e    ", time_step, time);
+      print(file[IntegrationData::TOTAL_ENTHALPY], "%10d    %16.14e    ", time_step, time);
       double H[numMaterials];
       double sum = 0.0;
       IntegrateTotalEnthalpy(index, tag, coords, dxyz, cell, v, id, H);
       for(int i=0; i<numMaterials; i++) {
-        print(file[IntegrationData::TOTAL_ENTHALPY], "%16.8e  ", H[i]);
+        print(file[IntegrationData::TOTAL_ENTHALPY], "%16.14e  ", H[i]);
         sum += H[i];
       }
-      print(file[IntegrationData::TOTAL_ENTHALPY], "%16.8e\n", sum);
+      print(file[IntegrationData::TOTAL_ENTHALPY], "%16.14e\n", sum);
       print_flush(file[IntegrationData::TOTAL_ENTHALPY]);
     }
 
     if(file[IntegrationData::KINETIC_ENERGY]) {
-      print(file[IntegrationData::KINETIC_ENERGY], "%10d    %16.8e    ", time_step, time);
+      print(file[IntegrationData::KINETIC_ENERGY], "%10d    %16.14e    ", time_step, time);
       double kinetic[numMaterials];
       double sum = 0.0;
       IntegrateKineticEnergy(index, tag, coords, dxyz, cell, v, id, kinetic);
       for(int i=0; i<numMaterials; i++) {
-        print(file[IntegrationData::KINETIC_ENERGY], "%16.8e  ", kinetic[i]);
+        print(file[IntegrationData::KINETIC_ENERGY], "%16.14e  ", kinetic[i]);
         sum += kinetic[i];
       }
-      print(file[IntegrationData::KINETIC_ENERGY], "%16.8e\n", sum);
+      print(file[IntegrationData::KINETIC_ENERGY], "%16.14e\n", sum);
       print_flush(file[IntegrationData::KINETIC_ENERGY]);
     }
 
     if(file[IntegrationData::INTERNAL_ENERGY]) {
-      print(file[IntegrationData::INTERNAL_ENERGY], "%10d    %16.8e    ", time_step, time);
+      print(file[IntegrationData::INTERNAL_ENERGY], "%10d    %16.14e    ", time_step, time);
       double internal[numMaterials];
       double sum = 0.0;
       IntegrateInternalEnergy(index, tag, coords, dxyz, cell, v, id, internal);
       for(int i=0; i<numMaterials; i++) {
-        print(file[IntegrationData::INTERNAL_ENERGY], "%16.8e  ", internal[i]);
+        print(file[IntegrationData::INTERNAL_ENERGY], "%16.14e  ", internal[i]);
         sum += internal[i];
       }
-      print(file[IntegrationData::INTERNAL_ENERGY], "%16.8e\n", sum);
+      print(file[IntegrationData::INTERNAL_ENERGY], "%16.14e\n", sum);
       print_flush(file[IntegrationData::INTERNAL_ENERGY]);
     }
 
     if(file[IntegrationData::POTENTIAL_ENERGY]) {
-      print(file[IntegrationData::POTENTIAL_ENERGY], "%10d    %16.8e    ", time_step, time);
+      print(file[IntegrationData::POTENTIAL_ENERGY], "%10d    %16.14e    ", time_step, time);
       double potential[numMaterials];
       double sum = 0.0;
       IntegratePotentialEnergy(index, tag, coords, dxyz, cell, v, id, potential);
       for(int i=0; i<numMaterials; i++) {
-        print(file[IntegrationData::POTENTIAL_ENERGY], "%16.8e  ", potential[i]);
+        print(file[IntegrationData::POTENTIAL_ENERGY], "%16.14e  ", potential[i]);
         sum += potential[i];
       }
-      print(file[IntegrationData::POTENTIAL_ENERGY], "%16.8e\n", sum);
+      print(file[IntegrationData::POTENTIAL_ENERGY], "%16.14e\n", sum);
       print_flush(file[IntegrationData::POTENTIAL_ENERGY]);
     }
 
     if(file[IntegrationData::LASER_RADIATION]) {
-      print(file[IntegrationData::LASER_RADIATION], "%10d    %16.8e    ", time_step, time);
+      print(file[IntegrationData::LASER_RADIATION], "%10d    %16.14e    ", time_step, time);
       assert(l);
       double radiation[numMaterials];
       double sum = 0.0;
       IntegrateLaserRadiation(index, tag, coords, dxyz, cell, v, id, l, radiation);
       for(int i=0; i<numMaterials; i++) {
-        print(file[IntegrationData::LASER_RADIATION], "%16.8e  ", radiation[i]);
+        print(file[IntegrationData::LASER_RADIATION], "%16.14e  ", radiation[i]);
         sum += radiation[i];
       }
-      print(file[IntegrationData::LASER_RADIATION], "%16.8e\n", sum);
+      print(file[IntegrationData::LASER_RADIATION], "%16.14e\n", sum);
       print_flush(file[IntegrationData::LASER_RADIATION]);
     }
 
