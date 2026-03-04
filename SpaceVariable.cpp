@@ -5,6 +5,7 @@
 
 #include <SpaceVariable.h>
 #include <GlobalMeshInfo.h>
+#include <IoData.h>
 #include <petscviewer.h>
 //#include <petscviewerhdf5.h>
 #include <Utils.h>
@@ -15,20 +16,6 @@ extern int INACTIVE_MATERIAL_ID;
 
 //---------------------------------------------------------
 // DataManagers3D
-//---------------------------------------------------------
-// static member variables
-/*
-DM DataManagers3D::ghosted1_1dof; //ghosted"1" --> stencil width is 1
-DM DataManagers3D::ghosted1_2dof;
-DM DataManagers3D::ghosted1_3dof;
-DM DataManagers3D::ghosted1_4dof;
-DM DataManagers3D::ghosted1_5dof;
-DM DataManagers3D::ghosted1_6dof;
-DM DataManagers3D::ghosted1_9dof;
-
-DM DataManagers3D::ghosted2_1dof;
-DM DataManagers3D::ghosted2_3dof;
-*/
 //---------------------------------------------------------
 
 DataManagers3D::DataManagers3D()
@@ -52,11 +39,16 @@ DataManagers3D::~DataManagers3D()
 
 //---------------------------------------------------------
 
-int DataManagers3D::CreateAllDataManagers(MPI_Comm comm, int NX, int NY, int NZ)
+int DataManagers3D::CreateAllDataManagers(MPI_Comm comm, int NX, int NY, int NZ, MeshData *mesh)
 {
+  // Check whether domain has periodic boundaries
+  DMBoundaryType bctype_x = (mesh && mesh->bc_x0==MeshData::PERIODIC) ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_GHOSTED;
+  DMBoundaryType bctype_y = (mesh && mesh->bc_y0==MeshData::PERIODIC) ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_GHOSTED;
+  DMBoundaryType bctype_z = (mesh && mesh->bc_z0==MeshData::PERIODIC) ? DM_BOUNDARY_PERIODIC : DM_BOUNDARY_GHOSTED;
+
   int nProcX, nProcY, nProcZ; //All DM's should use the same domain partition
 
-  auto ierr = DMDACreate3d(comm, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED,
+  auto ierr = DMDACreate3d(comm, bctype_x, bctype_y, bctype_z,
                            DMDA_STENCIL_BOX,
                            NX, NY, NZ,
                            PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
@@ -70,7 +62,7 @@ int DataManagers3D::CreateAllDataManagers(MPI_Comm comm, int NX, int NY, int NZ)
   DMDAGetInfo(ghosted1_1dof, NULL, NULL, NULL, NULL, &nProcX, &nProcY, &nProcZ, NULL, NULL, NULL,
               NULL, NULL, NULL); 
 
-  ierr = DMDACreate3d(comm, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED,
+  ierr = DMDACreate3d(comm, bctype_x, bctype_y, bctype_z,
                       DMDA_STENCIL_BOX,
                       NX, NY, NZ,
                       PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
@@ -81,7 +73,7 @@ int DataManagers3D::CreateAllDataManagers(MPI_Comm comm, int NX, int NY, int NZ)
   DMSetFromOptions(ghosted1_2dof);
   DMSetUp(ghosted1_2dof);
 
-  ierr = DMDACreate3d(comm, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED,
+  ierr = DMDACreate3d(comm, bctype_x, bctype_y, bctype_z,
                       DMDA_STENCIL_BOX,
                       NX, NY, NZ,
                       PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
@@ -92,7 +84,7 @@ int DataManagers3D::CreateAllDataManagers(MPI_Comm comm, int NX, int NY, int NZ)
   DMSetFromOptions(ghosted1_3dof);
   DMSetUp(ghosted1_3dof);
 
-  ierr = DMDACreate3d(comm, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED,
+  ierr = DMDACreate3d(comm, bctype_x, bctype_y, bctype_z,
                       DMDA_STENCIL_BOX,
                       NX, NY, NZ,
                       PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
@@ -103,7 +95,7 @@ int DataManagers3D::CreateAllDataManagers(MPI_Comm comm, int NX, int NY, int NZ)
   DMSetFromOptions(ghosted1_4dof);
   DMSetUp(ghosted1_4dof);
 
-  ierr = DMDACreate3d(comm, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED,
+  ierr = DMDACreate3d(comm, bctype_x, bctype_y, bctype_z,
                       DMDA_STENCIL_BOX,
                       NX, NY, NZ,
                       PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
@@ -114,7 +106,7 @@ int DataManagers3D::CreateAllDataManagers(MPI_Comm comm, int NX, int NY, int NZ)
   DMSetFromOptions(ghosted1_5dof);
   DMSetUp(ghosted1_5dof);
 
-  ierr = DMDACreate3d(comm, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED,
+  ierr = DMDACreate3d(comm, bctype_x, bctype_y, bctype_z,
                       DMDA_STENCIL_BOX,
                       NX, NY, NZ,
                       PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
@@ -125,7 +117,7 @@ int DataManagers3D::CreateAllDataManagers(MPI_Comm comm, int NX, int NY, int NZ)
   DMSetFromOptions(ghosted1_6dof);
   DMSetUp(ghosted1_6dof);
 
-  ierr = DMDACreate3d(comm, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED,
+  ierr = DMDACreate3d(comm, bctype_x, bctype_y, bctype_z,
                       DMDA_STENCIL_BOX,
                       NX, NY, NZ,
                       PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
@@ -136,7 +128,7 @@ int DataManagers3D::CreateAllDataManagers(MPI_Comm comm, int NX, int NY, int NZ)
   DMSetFromOptions(ghosted1_9dof);
   DMSetUp(ghosted1_9dof);
 
-  ierr = DMDACreate3d(comm, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED,
+  ierr = DMDACreate3d(comm, bctype_x, bctype_y, bctype_z,
                       DMDA_STENCIL_BOX,
                       NX, NY, NZ,
                       PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
@@ -147,7 +139,7 @@ int DataManagers3D::CreateAllDataManagers(MPI_Comm comm, int NX, int NY, int NZ)
   DMSetFromOptions(ghosted2_1dof);
   DMSetUp(ghosted2_1dof);
 
-  ierr = DMDACreate3d(comm, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED,
+  ierr = DMDACreate3d(comm, bctype_x, bctype_y, bctype_z,
                       DMDA_STENCIL_BOX,
                       NX, NY, NZ,
                       PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE,
@@ -216,7 +208,9 @@ void SpaceVariable3D::Setup(MPI_Comm &comm_, DM *dm_)
   if(bx==DM_BOUNDARY_NONE && by==DM_BOUNDARY_NONE && bz==DM_BOUNDARY_NONE) {
     ghosted = false;
     ghost_width = 0;
-  } else if(bx==DM_BOUNDARY_GHOSTED && by==DM_BOUNDARY_GHOSTED && bz==DM_BOUNDARY_GHOSTED) {
+  } else if((bx==DM_BOUNDARY_GHOSTED || bx==DM_BOUNDARY_GHOSTED) &&
+            (by==DM_BOUNDARY_GHOSTED || by==DM_BOUNDARY_GHOSTED) &&
+            (bz==DM_BOUNDARY_GHOSTED || bz==DM_BOUNDARY_GHOSTED)) {
     ghosted = true;
   } else {
     PetscPrintf(*comm, "*** Error: Unsupported ghost type.\n");

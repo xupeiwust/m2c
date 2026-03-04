@@ -8,6 +8,8 @@
 #include <petscdmda.h>
 #include <vector>
 
+struct MeshData;
+
 /*******************************************
  * This class stores all the DM's
  *******************************************
@@ -15,8 +17,8 @@
 class DataManagers3D {
 
 public:
-  //! Note: To avoid ambiguities, ghosted means DM_BOUNDARY_GHOSTED. We do NOT use DM_BOUNDARY_MIRROR, 
-  //!       _PERIODIC, _TWISTED, ... Also, we always use DMDA_STENCIL_BOX for "stencil type"
+  //! Note: To avoid ambiguities, ghosted means DM_BOUNDARY_GHOSTED or DM_BOUNDARY_PERIODIC.
+  //!       We do NOT use DM_BOUNDARY_MIRROR, _TWISTED, ... Also, we always use DMDA_STENCIL_BOX for "stencil type"
   //
   DM ghosted1_1dof; //!< ghosted"1" --> stencil width is 1 
   DM ghosted1_2dof;  
@@ -34,7 +36,7 @@ public:
   DataManagers3D(MPI_Comm comm, int NX, int NY, int NZ);
   ~DataManagers3D();
 
-  int CreateAllDataManagers(MPI_Comm comm, int NX, int NY, int NZ);
+  int CreateAllDataManagers(MPI_Comm comm, int NX, int NY, int NZ, MeshData *mesh = NULL);
   void DestroyAllDataManagers(); //!< need to call this before "PetscFinalize()".
 
 };

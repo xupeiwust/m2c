@@ -281,7 +281,7 @@ struct MeshData {
   ObjectMap<MeshResolution1DPointData>  zpoints_map;
 
   enum BcType {NONE = 0, INLET = 1, INLET2 = 2, SLIPWALL = 3, STICKWALL = 4, SYMMETRY = 5, 
-               OVERSET = 6, OUTLET = 7, SIZE = 8};
+               OVERSET = 6, OUTLET = 7, PERIODIC = 8, SIZE = 9};
   BcType bc_x0, bc_xmax, bc_y0, bc_ymax, bc_z0, bc_zmax;
 
   MeshData();
@@ -811,7 +811,8 @@ struct LevelSetSchemeData {
   ReconstructionData rec;
   double delta; //!< The coeffient in Harten's entropy fix.
 
-  enum BcType {NONE = 0, ZERO_NEUMANN = 1, LINEAR_EXTRAPOLATION = 2, NON_NEGATIVE = 3, SIZE = 4};
+  enum BcType {NONE = 0, ZERO_NEUMANN = 1, LINEAR_EXTRAPOLATION = 2, NON_NEGATIVE = 3, PERIODIC = 4,
+               SIZE = 5};
   BcType bc_x0, bc_xmax, bc_y0, bc_ymax, bc_z0, bc_zmax;
   
   //! Initialization of Phi: by distance calculation (accurate, but not robust for complex geometries), \n

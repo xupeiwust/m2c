@@ -374,6 +374,9 @@ IncompressibleOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
       }
       else if(it->bcType == MeshData::OVERSET) {
         // nothing to be done here. ghost nodes will be populated below
+      }
+      else if(it->bcType == MeshData::PERIODIC) {
+        // nothing to be done here. Taken care of by SpaceVariable3D/PETSc
       } else {
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
         exit(-1);
@@ -402,6 +405,9 @@ IncompressibleOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
       }
       else if(it->bcType == MeshData::OVERSET) {
         // nothing to be done here. ghost nodes will be populated below
+      }
+      else if(it->bcType == MeshData::PERIODIC) {
+        // nothing to be done here. Taken care of by SpaceVariable3D/PETSc
       } else {
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
         exit(-1);
@@ -430,6 +436,9 @@ IncompressibleOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
       }
       else if(it->bcType == MeshData::OVERSET) {
         // nothing to be done here. ghost nodes will be populated below
+      }
+      else if(it->bcType == MeshData::PERIODIC) {
+        // nothing to be done here. Taken care of by SpaceVariable3D/PETSc
       } else {
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
         exit(-1);
@@ -470,6 +479,9 @@ IncompressibleOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
       }
       else if(it->bcType == MeshData::OVERSET) {
         // nothing to be done here. ghost nodes will be populated below
+      }
+      else if(it->bcType == MeshData::PERIODIC) {
+        // nothing to be done here. Taken care of by SpaceVariable3D/PETSc
       } else {
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
         exit(-1);
@@ -498,6 +510,9 @@ IncompressibleOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
       }
       else if(it->bcType == MeshData::OVERSET) {
         // nothing to be done here. ghost nodes will be populated below
+      }
+      else if(it->bcType == MeshData::PERIODIC) {
+        // nothing to be done here. Taken care of by SpaceVariable3D/PETSc
       } else {
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
         exit(-1);
@@ -526,6 +541,9 @@ IncompressibleOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
       }
       else if(it->bcType == MeshData::OVERSET) {
         // nothing to be done here. ghost nodes will be populated below
+      }
+      else if(it->bcType == MeshData::PERIODIC) {
+        // nothing to be done here. Taken care of by SpaceVariable3D/PETSc
       } else {
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
         exit(-1);
@@ -1226,6 +1244,8 @@ IncompressibleOperator::BuildVelocityEquationSIMPLE(int dir, Vec5D*** v0, Vec5D*
           else if(iod.mesh.bc_x0 == MeshData::STICKWALL)
             ap += a; //bb[k][j][i] -= a*v[k][j][i][dir+1]; //v[k][j][i-1][dir+1] should be -v[k][j][i][dir+1]
                                                 //to have zero velocity on the wall
+          else if(iod.mesh.bc_x0 == MeshData::PERIODIC)
+            row.PushEntry(NX-1,j,k, -a);  //on the left hand side
           else {
             fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n",
                     (int)iod.mesh.bc_x0);
@@ -1312,6 +1332,8 @@ IncompressibleOperator::BuildVelocityEquationSIMPLE(int dir, Vec5D*** v0, Vec5D*
           else if(iod.mesh.bc_xmax == MeshData::STICKWALL) {
             if(dir != 0) //otherwise, v[k][j][i+1][1] should be 0 as it is on the wall
               ap += a; //bb[k][j][i] -= a*v[k][j][i][dir+1]; //v[k][j][i+1][dir+1] should be -v[k][j][i][dir+1]
+          } else if(iod.mesh.bc_xmax == MeshData::PERIODIC) {
+            row.PushEntry(0,j,k, -a);  //on the left hand side
           } else {
             fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n",
                     (int)iod.mesh.bc_xmax);
@@ -1403,6 +1425,8 @@ IncompressibleOperator::BuildVelocityEquationSIMPLE(int dir, Vec5D*** v0, Vec5D*
           else if(iod.mesh.bc_y0 == MeshData::STICKWALL)
             ap += a; //bb[k][j][i] -= a*v[k][j][i][dir+1]; //v[k][j-1][i][dir+1] should be -v[k][j][i][dir+1]
                                                 //to have zero velocity on the wall
+          else if(iod.mesh.bc_y0 == MeshData::PERIODIC)
+            row.PushEntry(i,NY-1,k, -a);  //on the left hand side
           else {
             fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n",
                     (int)iod.mesh.bc_y0);
@@ -1489,6 +1513,9 @@ IncompressibleOperator::BuildVelocityEquationSIMPLE(int dir, Vec5D*** v0, Vec5D*
           else if(iod.mesh.bc_ymax == MeshData::STICKWALL) {
             if(dir != 1) //otherwise, v[k][j+1][i][2] should be 0 as it is on the wall
               ap += a; //bb[k][j][i] -= a*v[k][j][i][dir+1]; //v[k][j+1][i][dir+1] should be -v[k][j][i][dir+1]
+          }
+          else if(iod.mesh.bc_ymax == MeshData::PERIODIC) {
+            row.PushEntry(i,0,k, -a);  //on the left hand side
           } else {
             fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n",
                     (int)iod.mesh.bc_ymax);
@@ -1573,6 +1600,8 @@ IncompressibleOperator::BuildVelocityEquationSIMPLE(int dir, Vec5D*** v0, Vec5D*
           else if(iod.mesh.bc_z0 == MeshData::STICKWALL)
             ap += a; //bb[k][j][i] -= a*v[k][j][i][dir+1]; //v[k-1][j][i][dir+1] should be -v[k][j][i][dir+1]
                                                 //to have zero velocity on the wall
+          else if(iod.mesh.bc_z0 == MeshData::PERIODIC)
+            row.PushEntry(i,j,NZ-1, -a);  //on the left hand side
           else {
             fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n",
                     (int)iod.mesh.bc_z0);
@@ -1661,6 +1690,8 @@ IncompressibleOperator::BuildVelocityEquationSIMPLE(int dir, Vec5D*** v0, Vec5D*
           else if(iod.mesh.bc_zmax == MeshData::STICKWALL) {
             if(dir != 2) //otherwise, v[k+1][j][i][3] should be 0 as it is on the wall
               ap += a; //bb[k][j][i] -= a*v[k][j][i][dir+1]; //v[k+1][j][i][dir+1] should be -v[k][j][i][dir+1]
+          } else if(iod.mesh.bc_zmax == MeshData::PERIODIC) {
+            row.PushEntry(i,j,0, -a);  //on the left hand side
           } else {
             fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n",
                     (int)iod.mesh.bc_zmax);
@@ -2112,6 +2143,8 @@ IncompressibleOperator::CalculateCoefficientsSIMPLER(int dir, Vec5D*** v0, Vec5D
           else if(iod.mesh.bc_x0 == MeshData::STICKWALL)
             ap += a; //bb[k][j][i] -= a*v[k][j][i][dir+1]; //v[k][j][i-1][dir+1] should be -v[k][j][i][dir+1]
                                                 //to have zero velocity on the wall
+          else if(iod.mesh.bc_x0 == MeshData::PERIODIC)
+            row.PushEntry(NX-1,j,k, -a);  //on the left hand side
           else {
             fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n",
                     (int)iod.mesh.bc_x0);
@@ -2183,6 +2216,8 @@ IncompressibleOperator::CalculateCoefficientsSIMPLER(int dir, Vec5D*** v0, Vec5D
           } else if(iod.mesh.bc_xmax == MeshData::STICKWALL) {
             if(dir != 0) //otherwise, v[k][j][i+1][1] should be 0 as it is on the wall
               ap += a; //bb[k][j][i] -= a*v[k][j][i][dir+1]; //v[k][j][i+1][dir+1] should be -v[k][j][i][dir+1]
+          } else if(iod.mesh.bc_xmax == MeshData::PERIODIC) {
+            row.PushEntry(0,j,k, -a);  //on the left hand side
           } else {
             fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n",
                     (int)iod.mesh.bc_xmax);
@@ -2253,6 +2288,8 @@ IncompressibleOperator::CalculateCoefficientsSIMPLER(int dir, Vec5D*** v0, Vec5D
           else if(iod.mesh.bc_y0 == MeshData::STICKWALL)
             ap += a; //bb[k][j][i] -= a*v[k][j][i][dir+1]; //v[k][j-1][i][dir+1] should be -v[k][j][i][dir+1]
                                                 //to have zero velocity on the wall
+          else if(iod.mesh.bc_y0 == MeshData::PERIODIC)
+            row.PushEntry(i,NY-1,k, -a);  //on the left hand side
           else {
             fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n",
                     (int)iod.mesh.bc_y0);
@@ -2325,6 +2362,8 @@ IncompressibleOperator::CalculateCoefficientsSIMPLER(int dir, Vec5D*** v0, Vec5D
           } else if(iod.mesh.bc_ymax == MeshData::STICKWALL) {
             if(dir != 1) //otherwise, v[k][j+1][i][2] should be 0 as it is on the wall
               ap += a; //bb[k][j][i] -= a*v[k][j][i][dir+1]; //v[k][j+1][i][dir+1] should be -v[k][j][i][dir+1]
+          } else if(iod.mesh.bc_ymax == MeshData::PERIODIC) {
+            row.PushEntry(i,0,k, -a);  //on the left hand side
           } else {
             fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n",
                     (int)iod.mesh.bc_ymax);
@@ -2395,6 +2434,8 @@ IncompressibleOperator::CalculateCoefficientsSIMPLER(int dir, Vec5D*** v0, Vec5D
           else if(iod.mesh.bc_z0 == MeshData::STICKWALL)
             ap += a; //bb[k][j][i] -= a*v[k][j][i][dir+1]; //v[k-1][j][i][dir+1] should be -v[k][j][i][dir+1]
                                                 //to have zero velocity on the wall
+          else if(iod.mesh.bc_z0 == MeshData::PERIODIC)
+            row.PushEntry(i,j,NZ-1, -a);  //on the left hand side
           else {
             fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n",
                     (int)iod.mesh.bc_z0);
@@ -2467,6 +2508,8 @@ IncompressibleOperator::CalculateCoefficientsSIMPLER(int dir, Vec5D*** v0, Vec5D
           } else if(iod.mesh.bc_zmax == MeshData::STICKWALL) {
             if(dir != 2) //otherwise, v[k+1][j][i][3] should be 0 as it is on the wall
               ap += a; //bb[k][j][i] -= a*v[k][j][i][dir+1]; //v[k+1][j][i][dir+1] should be -v[k][j][i][dir+1]
+          } else if(iod.mesh.bc_zmax == MeshData::PERIODIC) {
+            row.PushEntry(i,j,0, -a);  //on the left hand side
           } else {
             fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n",
                     (int)iod.mesh.bc_zmax);
@@ -3321,6 +3364,8 @@ IncompressibleOperator::BuildSATurbulenceEquationSIMPLE(Vec5D*** v, double*** id
           else if(iod.mesh.bc_x0 == MeshData::STICKWALL)
             ap += a; //bb[k][j][i] -= a*vturb[k][j][i]; //vturb[k][j][i-1] should be -vturb[k][j][i]
                                              //to have zero on the wall
+          else if(iod.mesh.bc_x0 == MeshData::PERIODIC)
+            row.PushEntry(NX-1,j,k, -a);  //on the left hand side
           else {
             fprintf(stdout,"*** Error: Detected unsupported boundary condition type (%d).\n",
                     (int)iod.mesh.bc_x0);
@@ -3353,6 +3398,8 @@ IncompressibleOperator::BuildSATurbulenceEquationSIMPLE(Vec5D*** v, double*** id
             ap -= a;
           } else if(iod.mesh.bc_xmax == MeshData::STICKWALL) {
             ap += a; //bb[k][j][i] -= a*vturb[k][j][i]; //vturb[k][j][i+1] should be -vturb[k][j][i]
+          } else if(iod.mesh.bc_xmax == MeshData::PERIODIC) {
+            row.PushEntry(0,j,k, -a);  //on the left hand side
           } else {
             fprintf(stdout,"*** Error: Detected unsupported boundary condition type (%d).\n",
                     (int)iod.mesh.bc_xmax);
@@ -3387,6 +3434,8 @@ IncompressibleOperator::BuildSATurbulenceEquationSIMPLE(Vec5D*** v, double*** id
             ap -= a;
           else if(iod.mesh.bc_y0 == MeshData::STICKWALL)
             ap += a; //bb[k][j][i] -= a*vturb[k][j][i]; 
+          else if(iod.mesh.bc_y0 == MeshData::PERIODIC)
+            row.PushEntry(i,NY-1,k, -a);  //on the left hand side
           else {
             fprintf(stdout,"*** Error: Detected unsupported boundary condition type (%d).\n",
                     (int)iod.mesh.bc_y0);
@@ -3419,6 +3468,8 @@ IncompressibleOperator::BuildSATurbulenceEquationSIMPLE(Vec5D*** v, double*** id
             ap -= a;
           } else if(iod.mesh.bc_ymax == MeshData::STICKWALL) {
             bb[k][j][i] -= a*vturb[k][j][i];
+          } else if(iod.mesh.bc_ymax == MeshData::PERIODIC) {
+            row.PushEntry(i,0,k, -a);  //on the left hand side
           } else {
             fprintf(stdout,"*** Error: Detected unsupported boundary condition type (%d).\n",
                     (int)iod.mesh.bc_ymax);
@@ -3451,6 +3502,8 @@ IncompressibleOperator::BuildSATurbulenceEquationSIMPLE(Vec5D*** v, double*** id
             ap -= a;
           else if(iod.mesh.bc_z0 == MeshData::STICKWALL)
             bb[k][j][i] -= a*vturb[k][j][i];
+          else if(iod.mesh.bc_z0 == MeshData::PERIODIC)
+            row.PushEntry(i,j,NZ-1, -a);  //on the left hand side
           else {
             fprintf(stdout,"*** Error: Detected unsupported boundary condition type (%d).\n",
                     (int)iod.mesh.bc_z0);
@@ -3483,6 +3536,8 @@ IncompressibleOperator::BuildSATurbulenceEquationSIMPLE(Vec5D*** v, double*** id
             ap -= a;
           } else if(iod.mesh.bc_zmax == MeshData::STICKWALL) {
             bb[k][j][i] -= a*vturb[k][j][i];
+          } else if(iod.mesh.bc_zmax == MeshData::PERIODIC) {
+            row.PushEntry(i,j,0, -a);  //on the left hand side
           } else {
             fprintf(stdout,"*** Error: Detected unsupported boundary condition type (%d).\n",
                     (int)iod.mesh.bc_zmax);
@@ -3587,6 +3642,7 @@ IncompressibleOperator::ApplyBoundaryConditionsTurbulenceVariables(SpaceVariable
         vturb[k][j][i] = -vturb[im_k][im_j][im_i];
         break;
       case MeshData::OVERSET :
+      case MeshData::PERIODIC :
         break; // nothing to be done here.
       default:
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
@@ -3759,6 +3815,7 @@ IncompressibleOperator::ApplyVelocityBoundaryConditionLocal(int dir, GhostPoint:
         vghost = -vim;
         break;
       case MeshData::OVERSET :
+      case MeshData::PERIODIC:
         //nothing to be done here. TODO
         break;
       default : //Note: edge & corner ghosts have type == NONE (0), shouldn't try to populate these ghosts
@@ -3834,6 +3891,7 @@ IncompressibleOperator::ApplyVelocityBoundaryConditionLocal3D(GhostPoint::Side s
         vghost = -vim;
         break;
       case MeshData::OVERSET :
+      case MeshData::PERIODIC:
         //nothing to be done here. TODO
         break;
       default : //Note: edge & corner ghosts have type == NONE (0), shouldn't try to populate these ghosts

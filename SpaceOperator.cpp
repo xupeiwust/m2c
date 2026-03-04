@@ -799,10 +799,11 @@ void SpaceOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
       for(int p=0; p<5; p++)
         v[k][j][i][p] = v[im_k][im_j][im_i][p];
     } 
-     else if(it->bcType == MeshData::OVERSET) {
-
+    else if(it->bcType == MeshData::OVERSET) {
       // nothing to be done here. ghost nodes will be populated below
-      
+    }
+    else if(it->bcType == MeshData::PERIODIC) {
+      // nothing to be done here. ghost nodes are taken care of by SpaceVariable3D/PETSc
     } else {
       fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
       exit(-1);

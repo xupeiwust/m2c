@@ -524,7 +524,7 @@ void MeshData::setup(const char *name, ClassAssigner *father)
   zpoints_map.setup("ControlPointZ", ca);
 
   new ClassToken<MeshData>(ca, "BoundaryConditionX0", this,
-                               reinterpret_cast<int MeshData::*>(&MeshData::bc_x0), 12,
+                               reinterpret_cast<int MeshData::*>(&MeshData::bc_x0), 13,
                                "None", 0, 
                                "Inlet", 1, "Inlet2", 2, //option 1
                                "Farfield", 1, "Farfield2", 2, //option 2,
@@ -532,9 +532,9 @@ void MeshData::setup(const char *name, ClassAssigner *father)
                                "SlipWall", 3, //slip wall,
                                "StickWall", 4, //no-slip wall
                                "NoSlipWall", 4, "Symmetry", 5,
-                               "Overset", 6, "Outlet", 7);
+                               "Overset", 6, "Outlet", 7, "Periodic", 8);
   new ClassToken<MeshData>(ca, "BoundaryConditionXmax", this,
-                               reinterpret_cast<int MeshData::*>(&MeshData::bc_xmax), 12,
+                               reinterpret_cast<int MeshData::*>(&MeshData::bc_xmax), 13,
                                "None", 0, 
                                "Inlet", 1, "Inlet2", 2, //option 1
                                "Farfield", 1, "Farfield2", 2, //option 2,
@@ -542,9 +542,9 @@ void MeshData::setup(const char *name, ClassAssigner *father)
                                "SlipWall", 3, //slip wall,
                                "StickWall", 4, //no-slip wall
                                "NoSlipWall", 4, "Symmetry", 5,
-                               "Overset", 6, "Outlet", 7);
+                               "Overset", 6, "Outlet", 7, "Periodic", 8);
   new ClassToken<MeshData>(ca, "BoundaryConditionY0", this,
-                               reinterpret_cast<int MeshData::*>(&MeshData::bc_y0), 12,
+                               reinterpret_cast<int MeshData::*>(&MeshData::bc_y0), 13,
                                "None", 0, 
                                "Inlet", 1, "Inlet2", 2, //option 1
                                "Farfield", 1, "Farfield2", 2, //option 2,
@@ -552,9 +552,9 @@ void MeshData::setup(const char *name, ClassAssigner *father)
                                "SlipWall", 3, //slip wall,
                                "StickWall", 4, //no-slip wall
                                "NoSlipWall", 4, "Symmetry", 5,
-                               "Overset", 6, "Outlet", 7);
+                               "Overset", 6, "Outlet", 7, "Periodic", 8);
   new ClassToken<MeshData>(ca, "BoundaryConditionYmax", this,
-                               reinterpret_cast<int MeshData::*>(&MeshData::bc_ymax), 12,
+                               reinterpret_cast<int MeshData::*>(&MeshData::bc_ymax), 13,
                                "None", 0, 
                                "Inlet", 1, "Inlet2", 2, //option 1
                                "Farfield", 1, "Farfield2", 2, //option 2,
@@ -562,9 +562,9 @@ void MeshData::setup(const char *name, ClassAssigner *father)
                                "SlipWall", 3, //slip wall,
                                "StickWall", 4, //no-slip wall
                                "NoSlipWall", 4, "Symmetry", 5,
-                               "Overset", 6, "Outlet", 7);
+                               "Overset", 6, "Outlet", 7, "Periodic", 8);
   new ClassToken<MeshData>(ca, "BoundaryConditionZ0", this,
-                               reinterpret_cast<int MeshData::*>(&MeshData::bc_z0), 12,
+                               reinterpret_cast<int MeshData::*>(&MeshData::bc_z0), 13,
                                "None", 0, 
                                "Inlet", 1, "Inlet2", 2, //option 1
                                "Farfield", 1, "Farfield2", 2, //option 2,
@@ -572,9 +572,9 @@ void MeshData::setup(const char *name, ClassAssigner *father)
                                "SlipWall", 3, //slip wall,
                                "StickWall", 4, //no-slip wall
                                "NoSlipWall", 4, "Symmetry", 5,
-                               "Overset", 6, "Outlet", 7);
+                               "Overset", 6, "Outlet", 7, "Periodic", 8);
   new ClassToken<MeshData>(ca, "BoundaryConditionZmax", this,
-                               reinterpret_cast<int MeshData::*>(&MeshData::bc_zmax), 12,
+                               reinterpret_cast<int MeshData::*>(&MeshData::bc_zmax), 13,
                                "None", 0, 
                                "Inlet", 1, "Inlet2", 2, //option 1
                                "Farfield", 1, "Farfield2", 2, //option 2,
@@ -582,7 +582,7 @@ void MeshData::setup(const char *name, ClassAssigner *father)
                                "SlipWall", 3, //slip wall,
                                "StickWall", 4, //no-slip wall
                                "NoSlipWall", 4, "Symmetry", 5,
-                               "Overset", 6, "Outlet", 7);
+                               "Overset", 6, "Outlet", 7, "Periodic", 8);
  } 
 
 //------------------------------------------------------------------------------
@@ -613,6 +613,14 @@ void MeshData::check()
       exit_mpi();
     }
   }
+
+  if( ((bc_x0==PERIODIC) != (bc_xmax==PERIODIC)) ||
+      ((bc_y0==PERIODIC) != (bc_ymax==PERIODIC)) ||
+      ((bc_z0==PERIODIC) != (bc_zmax==PERIODIC)) ) {
+    print_error("*** Error: Periodic boundaries must be in pairs (e.g., Xmin and Xmax).\n");
+    exit_mpi();
+  }
+
 }
 
 //------------------------------------------------------------------------------
@@ -1559,23 +1567,23 @@ Assigner *LevelSetSchemeData::getAssigner()
   new ClassInt<LevelSetSchemeData>(ca, "Bandwidth", this, &LevelSetSchemeData::bandwidth);
 
   new ClassToken<LevelSetSchemeData>(ca, "BoundaryConditionX0", this,
-          reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::bc_x0), 4,
-          "None", 0, "ZeroNeumann", 1, "LinearExtrapolation", 2, "NonNegative", 3);
+          reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::bc_x0), 5,
+          "None", 0, "ZeroNeumann", 1, "LinearExtrapolation", 2, "NonNegative", 3, "Periodic", 4);
   new ClassToken<LevelSetSchemeData>(ca, "BoundaryConditionXmax", this,
-          reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::bc_xmax), 4,
-          "None", 0, "ZeroNeumann", 1, "LinearExtrapolation", 2, "NonNegative", 3);
+          reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::bc_xmax), 5,
+          "None", 0, "ZeroNeumann", 1, "LinearExtrapolation", 2, "NonNegative", 3, "Periodic", 4);
   new ClassToken<LevelSetSchemeData>(ca, "BoundaryConditionY0", this,
-          reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::bc_y0), 4,
-          "None", 0, "ZeroNeumann", 1, "LinearExtrapolation", 2, "NonNegative", 3);
+          reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::bc_y0), 5,
+          "None", 0, "ZeroNeumann", 1, "LinearExtrapolation", 2, "NonNegative", 3, "Periodic", 4);
   new ClassToken<LevelSetSchemeData>(ca, "BoundaryConditionYmax", this,
-          reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::bc_ymax), 4,
-          "None", 0, "ZeroNeumann", 1, "LinearExtrapolation", 2, "NonNegative", 3);
+          reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::bc_ymax), 5,
+          "None", 0, "ZeroNeumann", 1, "LinearExtrapolation", 2, "NonNegative", 3, "Periodic", 4);
   new ClassToken<LevelSetSchemeData>(ca, "BoundaryConditionZ0", this,
-          reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::bc_z0), 4,
-          "None", 0, "ZeroNeumann", 1, "LinearExtrapolation", 2, "NonNegative", 3);
+          reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::bc_z0), 5,
+          "None", 0, "ZeroNeumann", 1, "LinearExtrapolation", 2, "NonNegative", 3, "Periodic", 4);
   new ClassToken<LevelSetSchemeData>(ca, "BoundaryConditionZmax", this,
-          reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::bc_zmax), 4,
-          "None", 0, "ZeroNeumann", 1, "LinearExtrapolation", 2, "NonNegative", 3);
+          reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::bc_zmax), 5,
+          "None", 0, "ZeroNeumann", 1, "LinearExtrapolation", 2, "NonNegative", 3, "Periodic", 4);
 
   new ClassToken<LevelSetSchemeData>(ca, "Initialization", this,
           reinterpret_cast<int LevelSetSchemeData::*>(&LevelSetSchemeData::init), 2,

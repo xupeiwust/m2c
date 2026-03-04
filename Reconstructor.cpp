@@ -882,6 +882,9 @@ RETRY:
 
         break;
 
+      case MeshData::PERIODIC : //nothing to be done. SpaceVariable3D takes care of it
+        break;
+
       default :
         fprintf(stdout,"\033[0;31m*** Error: Cannot perform reconstruction for b.c. %d.\033[0m\n",
                 gp->bcType);
@@ -1144,6 +1147,9 @@ void Reconstructor::ReconstructIn1D(int dir/*0~x,1~y,2~z*/, SpaceVariable3D &U,
           slope[k][j][i] = -slope[kk][jj][ii];
         }
 
+        break;
+
+      case MeshData::PERIODIC : //nothing to do. SpaceVariable3D takes care of it.
         break;
 
       default :
