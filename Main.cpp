@@ -525,8 +525,9 @@ int main(int argc, char* argv[])
     LocalDt = new SpaceVariable3D(comm, &(dms.ghosted1_1dof)); //!< local dt for steady-state
   }
   if(steady_state) { //steady-state analysis
-    if(concurrent.Coupled()) {
-      print_error("*** Error: Unable to perform steady-state analysis with concurrent programs.\n");
+    if(concurrent.Coupled() && iod.ts.local_dt == TsData::YES) {
+      print_error("*** Error: Unable to perform steady-state analysis with both local time-stepping and"
+                  " concurrent programs.\n");
       exit_mpi();
     }
     if(lso.size()>0) {
@@ -684,12 +685,10 @@ int main(int argc, char* argv[])
       if(concurrent.GetTimeStepSize()<=0.0)
         dts = dt;
 
-/*
-      if(concurrent.GetTwinningStatus() == ConcurrentProgramsHandler::LEADER)
-        fprintf(stdout,"[Leader] dts = %e, dt = %e, dtleft = %e.\n", dts, dt, dtleft);
-      else
-        fprintf(stdout,"[Follower] dts = %e, dt = %e, dtleft = %e.\n", dts, dt, dtleft);
-*/
+//      if(concurrent.GetTwinningStatus() == ConcurrentProgramsHandler::LEADER)
+//        print("[Leader] dts = %e, dt = %e, dtleft = %e.\n", dts, dt, dtleft);
+//      else
+//        print("[Follower] dts = %e, dt = %e, dtleft = %e.\n", dts, dt, dtleft);
  
       if(steady_state)  {
         print("Step %d: t = %e, dt = %e, cfl = %.4e. Computation time: %.4e s.\n", 
@@ -714,7 +713,9 @@ int main(int argc, char* argv[])
       subcycle++; //do this *after* AdvanceOneTimeStep.
       //----------------------------------------------------
 
-      if(steady_state)
+      if(steady_state &&
+         (!concurrent.Coupled() || concurrent.GetTwinningStatus()==ConcurrentProgramsHandler::LEADER))
+        //if concurrent, only leader prints; convergence not checked for follower
         print("  => Residual: %.4e (func 1 norm) |  %.4e (2 norm)  |  %.4e (max).\n",
               integrator->GetRelativeResidual1Norm(), integrator->GetRelativeResidual2Norm(),
               integrator->GetRelativeResidualInfNorm());
