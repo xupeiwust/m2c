@@ -379,7 +379,6 @@ MultiSurfaceIntersector::FindNewEnclosuresByFloodFill()
   joint_intersector->FloodFillColors();
   EBDS_jnt = joint_intersector->GetPointerToResults(); //some info (e.g., nRegions) have changed
 
-
   // ------------------------------------------------------------
   // Step 6: Search for new enclosures (topological change)
   // ------------------------------------------------------------
@@ -419,11 +418,16 @@ MultiSurfaceIntersector::DetectNewEnclosures(int nPossiblePositiveColors,
 
   // ---------------------------------------------------------------------
   // Step 1: get color1 --> color_jnt and color2 --> color_jnt maps 
+  //         (as well as the reverse maps)
   // ---------------------------------------------------------------------
   vector<vector<int> > color1_new(nRegions1 + 1 + nPossiblePositiveColors);
   vector<vector<int> > color2_new(nRegions2 + 1 + nPossiblePositiveColors);
   //order: 0=>color=0(occluded), 1=>color=-1, ... nRegions1=>color=nRegions1, nRegions1+1=>color=1 (inlet),
   //       nRegions1+2=>color=2, ...
+
+  vector<vector<int> > colornew_1(nRegions_jnt + 1 + nPossiblePositiveColors);
+  vector<vector<int> > colornew_2(nRegions_jnt + 1 + nPossiblePositiveColors);
+  //order: same as above
 
   int c1, c2, c;
   for(int k=k0; k<kmax; k++)
@@ -440,6 +444,14 @@ MultiSurfaceIntersector::DetectNewEnclosures(int nPossiblePositiveColors,
         vector<int> &me2(color2_new[c2<=0 ? -c2 : nRegions2+c2]);
         if(std::find(me2.begin(), me2.end(), c) == me2.end())
           me2.push_back(c); 
+
+        vector<int> &mej1(colornew_1[c<=0 ? -c : nRegions_jnt+c]);
+        if(std::find(mej1.begin(), mej1.end(), c1) == mej1.end())
+          mej1.push_back(c1); 
+  
+        vector<int> &mej2(colornew_2[c<=0 ? -c : nRegions_jnt+c]);
+        if(std::find(mej2.begin(), mej2.end(), c2) == mej2.end())
+          mej2.push_back(c2); 
       }
 
   for(auto&& cc : color1_new) {
@@ -456,14 +468,36 @@ MultiSurfaceIntersector::DetectNewEnclosures(int nPossiblePositiveColors,
     cc.erase(std::unique(cc.begin(), cc.end()), cc.end());
   }
 
+  for(auto&& cc : colornew_1) {
+    CommunicationTools::AllGatherVector(comm, cc);
+    //remove duplicates after MPI gathering
+    std::sort(cc.begin(), cc.end());
+    cc.erase(std::unique(cc.begin(), cc.end()), cc.end());
+  }
+ 
+  for(auto&& cc : colornew_2) {
+    CommunicationTools::AllGatherVector(comm, cc);
+    //remove duplicates after MPI gathering
+    std::sort(cc.begin(), cc.end());
+    cc.erase(std::unique(cc.begin(), cc.end()), cc.end());
+  }
+ 
 
   // ---------------------------------------------------------------------
-  // Step 2: Find new enclosures -- Possibility A
+  // Step 2: Find new enclosures 
   // ---------------------------------------------------------------------
   // Enclosure i (1, 2, ..., nRegions_jnt) obtained from the joint intersector is a new enclosure IF
+  // * Case A
   // there exists a map c1->(i, ...) and a map c2->(i, ...), where c1 and c2 are two enclosures
   // from the two intersectors respectively, and (i, ...) means c1 is mapped to "i" AND at least
   // one other color (must be enclosure) from the joint intersector.
+  // * Case B
+  // there exists a map c1->(i, ...) and a map c2->(i, ...), where c1 and c2 are both colors connected
+  // to far-field (i.e., enclosure i belongs to far-field in both intersector 1 & 2
+  // * Case C (hybrid of A & B)
+  // there exists a map c1->(i, ...) and a map c2->(i, ...), where c1 OR c2 is a color connected
+  // to far-field, while the other (c2 OR c1) is an enclosure  
+
   for(int i=1; i<=nRegions_jnt; i++) {
     //check enclosure i
     bool found = false;
@@ -472,15 +506,24 @@ MultiSurfaceIntersector::DetectNewEnclosures(int nPossiblePositiveColors,
       if(std::find(cc.begin(), cc.end(), -i) != cc.end()) {
         for(auto&& c : cc)
           if(c<0 && c!=-i) {
-            found = true;
+            found = true; //Case A
             break;
           }
       }
       if(found)
         break;
     }
+    if(!found) {
+      for(int j=nRegions1+1; j<(int)color1_new.size(); j++) {
+        vector<int> &cc(color1_new[j]);
+        if(std::find(cc.begin(), cc.end(), -i) != cc.end()) {
+          found = true; //Case B
+          break;
+        }
+      }
+    }
     if(!found)
-      continue;
+      continue; //no need to check c2
 
     found = false;
     for(int j=1; j<=nRegions2; j++) {
@@ -488,51 +531,50 @@ MultiSurfaceIntersector::DetectNewEnclosures(int nPossiblePositiveColors,
       if(std::find(cc.begin(), cc.end(), -i) != cc.end()) {
         for(auto&& c : cc)
           if(c<0 && c!=-i) {
-            found = true;
+            found = true; //Case A
             break;
           }
       }
       if(found)
         break;
     }
-      
+    if(!found) {
+      for(int j=nRegions2+1; j<(int)color2_new.size(); j++) {
+        vector<int> &cc(color2_new[j]);
+        if(std::find(cc.begin(), cc.end(), -i) != cc.end()) {
+          found = true; //Case B
+          break;
+        }
+      }
+    }
+ 
     if(found)
       new_enclosure_color.push_back(-i); 
   }
 
-  // ---------------------------------------------------------------------
-  // Step 3: Find new enclosures -- Possibility B
-  // ---------------------------------------------------------------------
-  // Enclosure i (1, 2, ..., nRegions_jnt) obtained from the joint intersector is a new enclosure IF
-  // there exists a map c1->(i, ...) and a map c2->(i, ...), where c1 and c2 are both colors connected
-  // to far-field (i.e., enclosure i belongs to far-field in both intersector 1 & 2
-  for(int i=1; i<=nRegions_jnt; i++) {
-    //check enclosure i
-    bool found = false;
-    for(int j=nRegions1+1; j<(int)color1_new.size(); j++) {
-      vector<int> &cc(color1_new[j]);
-      if(std::find(cc.begin(), cc.end(), -i) != cc.end()) {
-        found = true;
-        break;
-      }
-    }
-    if(!found)
-      continue;
 
-    found = false;
-    for(int j=nRegions2+1; j<(int)color2_new.size(); j++) {
-      vector<int> &cc(color2_new[j]);
-      if(std::find(cc.begin(), cc.end(), -i) != cc.end()) {
-        found = true;
-        break;
-      }
+  // ---------------------------------------------------------------------
+  // Step 3: Clean up redundant 'new' enclosures
+  //         If a 'new' enclosure is (entirely) part of an enclosure in c1 or c2,
+  //         Remove it.
+  // ---------------------------------------------------------------------
+  std::set<int> used_c1, used_c2;
+  for(auto it = new_enclosure_color.begin(); it != new_enclosure_color.end();) {
+    int c = -(*it);
+    assert(c>0 && c<=nRegions_jnt);
+    if(colornew_1[c].size()==1 && colornew_1[c][0]<0 &&
+      used_c1.find(-colornew_1[c][0]) == used_c1.end()) {
+      used_c1.insert(-colornew_1[c][0]);
+      it = new_enclosure_color.erase(it);
+      continue;
     }
-     
-    if(found) {
-      if(std::find(new_enclosure_color.begin(), new_enclosure_color.end(), -i) 
-           == new_enclosure_color.end())
-        new_enclosure_color.push_back(-i); //avoid duplicates (won't happen anyway?)
+    if(colornew_2[c].size()==1 && colornew_2[c][0]<0 &&
+      used_c2.find(-colornew_2[c][0]) == used_c2.end()) {
+      used_c2.insert(-colornew_2[c][0]);
+      it = new_enclosure_color.erase(it);
+      continue;
     }
+    it++;
   }
 
 
@@ -720,6 +762,8 @@ bool
 MultiSurfaceIntersector::FindNewEnclosuresAfterSurfaceUpdate()
 {
   elem_new_status.clear();
+
+  //TODO: Be careful. new_enclosure_color will not be deleted, even if surfaces no longer intersect
 
   int newColor(0);
   if(new_enclosure_color.empty()) {

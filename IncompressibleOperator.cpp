@@ -376,7 +376,9 @@ IncompressibleOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
         // nothing to be done here. ghost nodes will be populated below
       }
       else if(it->bcType == MeshData::PERIODIC) {
-        // nothing to be done here. Taken care of by SpaceVariable3D/PETSc
+        v[k][j][im_i][1] = v[k][j][NX-1][1];
+        v[k][j][i][2]    = v[k][j][NX-1][2];
+        v[k][j][i][3]    = v[k][j][NX-1][3];
       } else {
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
         exit(-1);
@@ -407,7 +409,9 @@ IncompressibleOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
         // nothing to be done here. ghost nodes will be populated below
       }
       else if(it->bcType == MeshData::PERIODIC) {
-        // nothing to be done here. Taken care of by SpaceVariable3D/PETSc
+//        v[k][j][i][1] = v[k][j][0][1];
+//        v[k][j][i][2] = v[k][j][0][2];
+//        v[k][j][i][3] = v[k][j][0][3];
       } else {
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
         exit(-1);
@@ -438,7 +442,6 @@ IncompressibleOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
         // nothing to be done here. ghost nodes will be populated below
       }
       else if(it->bcType == MeshData::PERIODIC) {
-        // nothing to be done here. Taken care of by SpaceVariable3D/PETSc
       } else {
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
         exit(-1);
@@ -481,7 +484,6 @@ IncompressibleOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
         // nothing to be done here. ghost nodes will be populated below
       }
       else if(it->bcType == MeshData::PERIODIC) {
-        // nothing to be done here. Taken care of by SpaceVariable3D/PETSc
       } else {
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
         exit(-1);
@@ -512,7 +514,6 @@ IncompressibleOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
         // nothing to be done here. ghost nodes will be populated below
       }
       else if(it->bcType == MeshData::PERIODIC) {
-        // nothing to be done here. Taken care of by SpaceVariable3D/PETSc
       } else {
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
         exit(-1);
@@ -543,7 +544,6 @@ IncompressibleOperator::ApplyBoundaryConditions(SpaceVariable3D &V)
         // nothing to be done here. ghost nodes will be populated below
       }
       else if(it->bcType == MeshData::PERIODIC) {
-        // nothing to be done here. Taken care of by SpaceVariable3D/PETSc
       } else {
         fprintf(stdout,"*** Error: Detected unknown boundary condition type (%d).\n", (int)it->bcType);
         exit(-1);

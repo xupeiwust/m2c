@@ -251,19 +251,25 @@ CommunicationTools::GatherVectorOfVectors<Vec3D>(MPI_Comm& comm, int gatherer,
                                                  std::vector<std::vector<Vec3D> >* all_data_ptr);
 
 template void
+CommunicationTools::AllGatherVector<int>(MPI_Comm& comm, std::vector<int>& data);
+
+template void
 CommunicationTools::AllGatherVector<double>(MPI_Comm& comm, std::vector<double>& data);
 
 template void
-CommunicationTools::AllGatherVector<Vec3D>(MPI_Comm& comm, std::vector<Vec3D>& data);
+CommunicationTools::AllGatherVector<Int3>(MPI_Comm& comm, std::vector<Int3>& data);
 
 template void
-CommunicationTools::AllGatherVector<int>(MPI_Comm& comm, std::vector<int>& data);
+CommunicationTools::AllGatherVector<Vec3D>(MPI_Comm& comm, std::vector<Vec3D>& data);
 
 template void
 CommunicationTools::AllGatherVectorOfVectors<int>(MPI_Comm& comm, std::vector<std::vector<int> >& data);
 
 template void
 CommunicationTools::AllGatherVectorOfVectors<double>(MPI_Comm& comm, std::vector<std::vector<double> >& data);
+
+template void
+CommunicationTools::AllGatherVectorOfVectors<Int3>(MPI_Comm& comm, std::vector<std::vector<Int3> >& data);
 
 template void
 CommunicationTools::AllGatherVectorOfVectors<Vec3D>(MPI_Comm& comm, std::vector<std::vector<Vec3D> >& data);

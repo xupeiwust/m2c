@@ -7,6 +7,7 @@
 #include<GeoTools.h>
 #include<Intersections.h>
 #include<EmbeddedBoundaryDataSet.h>
+#include<CommunicationTools.h>
 using std::pair;
 using std::vector;
 using std::unique_ptr;
@@ -467,8 +468,11 @@ Intersector::FindIntersections() //also finds occluded and first layer nodes
           continue; 
 
         if(k<kmax && j<jmax && i<imax && //candid has a valid value @ i,j,k
-           candid[k][j][i] < 0)  //no nodal candidates, intersection impossible, occlusion also impossible
+           candid[k][j][i] < 0) { //no nodal candidates, intersection impossible, occlusion also impossible
+          xf[k][j][i] = -1; //set all 3 components to -1
+          xb[k][j][i] = -1;
           continue;
+        }
  
 
         //--------------------------------------------
@@ -609,6 +613,7 @@ Intersector::FindIntersections() //also finds occluded and first layer nodes
       for(int i=ii0_in; i<iimax_in; i++) {
  
         ijk_occluded = (occid[k][j][i]>=0);
+
         if(i-1>=ii0_in) { //left edge within physical domain
           
           if(occid[k][j][i-1]<0 && !ijk_occluded) { //neither (i-1,j,k) nor (i,j,k) occluded
@@ -780,7 +785,7 @@ Intersector::FindIntersections() //also finds occluded and first layer nodes
               if(occid[k-1][j][i]>=0 && ijk_occluded) {
                 xf[k][j][i][2] = intersections.size() - 2;
                 xb[k][j][i][2] = intersections.size() - 1;
-              } else if(occid[k-1][j-1][i]>=0) {
+              } else if(occid[k-1][j][i]>=0) {
                 xf[k][j][i][2] = intersections.size() - 1;
                 IntersectionPoint &p(intersections[xb[k][j][i][2]]);
                 if(p.dist<=half_thickness) {//this is essentially the first vertex
@@ -807,14 +812,7 @@ Intersector::FindIntersections() //also finds occluded and first layer nodes
   XBackward.RestoreDataPointerToLocalVector(); //Cannot exchange data, because "intersections" does not communicate
 
   coordinates.RestoreDataPointerToLocalVector();
-/*
-  XForward.RestoreDataPointerAndInsert();
-  XForward.StoreMeshCoordinates(coordinates);
-  XForward.WriteToVTRFile("XForward.vtr", "xf");
-  XBackward.RestoreDataPointerAndInsert();
-  XBackward.StoreMeshCoordinates(coordinates);
-  XBackward.WriteToVTRFile("XBackward.vtr", "xb");
-*/
+
   // ----------------------------------------------------------------------------
   // Build the sets of occluded and firstLayer nodes. Include internal ghost nodes
   // ----------------------------------------------------------------------------
@@ -835,14 +833,6 @@ Intersector::FindIntersections() //also finds occluded and first layer nodes
 
   LayerTag.RestoreDataPointerToLocalVector();
 
-/*
-  LayerTag.StoreMeshCoordinates(coordinates);
-  LayerTag.WriteToVTRFile("LayerTag.vtr", "layer");
-  OccTriangle.StoreMeshCoordinates(coordinates);
-  OccTriangle.WriteToVTRFile("OccTriangle.vtr", "occid");
-  Color.StoreMeshCoordinates(coordinates);
-  Color.WriteToVTRFile("Color.vtr", "color");
-*/
 }
 
 //-------------------------------------------------------------------------
@@ -1266,6 +1256,8 @@ Intersector::RefillAfterSurfaceUpdate(int color4new)
   std::set<Int3> nodes2fill = swept;
   std::set<Int3> nodes2fill2;
 
+  vector<Int3> all_nodes2fill; //for global communication
+
   // go over swept nodes, correct their colors
   int i,j,k;
   int BAD_SIGN = -999999; //used temporarily.
@@ -1279,10 +1271,6 @@ Intersector::RefillAfterSurfaceUpdate(int color4new)
     int prev_remaining = total_remaining_nodes;
     total_remaining_nodes = nodes2fill.size();
     MPI_Allreduce(MPI_IN_PLACE, &total_remaining_nodes, 1, MPI_INT, MPI_SUM, comm);
-
-//    if(total_remaining_nodes>0) {
-//      print("  - iter %d: total_remaining_nodes = %d.\n", iter, total_remaining_nodes);
-//    }
 
     if(total_remaining_nodes == 0 || total_remaining_nodes == prev_remaining)
       break;  //either done with refill :) or no progress :(
@@ -1299,10 +1287,8 @@ Intersector::RefillAfterSurfaceUpdate(int color4new)
       j = (*it)[1];
       k = (*it)[2]; 
 
-      if(iter==0 && !coordinates.IsHere(i,j,k,false)) { //an internal ghost. we let its owner fix it.
-        nodes2fill2.erase(nodes2fill2.find(*it)); 
+      if(!coordinates.IsHere(i,j,k,false)) //an internal ghost. we let its owner fix it.
         continue;
-      }
 
       if(iter==0 && color[k][j][i] == 0) { //occluded
         nodes2fill2.erase(nodes2fill2.find(*it)); 
@@ -1361,13 +1347,26 @@ Intersector::RefillAfterSurfaceUpdate(int color4new)
 
     nodes2fill = nodes2fill2;
 
+    //right now, nodes2fill may contain some internal ghost nodes. If some of them have been fixed by their
+    //owner, they should be removed.
+    all_nodes2fill.clear();
+    for(auto&& nod : nodes2fill)
+      if(coordinates.IsHere(nod[0],nod[1],nod[2],false))
+        all_nodes2fill.push_back(nod);
+    CommunicationTools::AllGatherVector(comm, all_nodes2fill);
+    for(auto it = nodes2fill.begin(); it != nodes2fill.end();) {
+      if(!coordinates.IsHere((*it)[0],(*it)[1],(*it)[2],false) &&
+         std::find(all_nodes2fill.begin(), all_nodes2fill.end(), *it) == all_nodes2fill.end())
+        it = nodes2fill.erase(it);
+      else
+        it++;
+    }
+
     Color.RestoreDataPointerAndInsert();
 
     // Get new data
     color = Color.GetDataPointer();
 
-    if(nodes2fill.size() != nodes2fill2.size()) //some node(s) got erased
-      nodes2fill = nodes2fill2;
   }
 
   // fill remaining nodes (new enclosure)
@@ -1385,8 +1384,7 @@ Intersector::RefillAfterSurfaceUpdate(int color4new)
         color[(*it)[2]][(*it)[1]][(*it)[0]] = color4new;
       for(int cc=nRegions+1; cc<=-color4new; cc++) //activated only if nRegions<-color4new
         ColorReachesBoundary.push_back(0);
-      nRegions = -color4new;
-      assert((int)ColorReachesBoundary.size() == nRegions+1);
+      nRegions = ColorReachesBoundary.size()-1;
     }
   }
 
@@ -1397,7 +1395,7 @@ Intersector::RefillAfterSurfaceUpdate(int color4new)
       if(it->type_projection != GhostPoint::FACE)
         continue;
       Int3& ijk(it->image_ijk);
-      if(!Color.IsHere(ijk[0],ijk[1],ijk[2]))
+      if(!Color.IsHere(ijk[0],ijk[1],ijk[2],false))
         continue; //let its owner handle it (also, color hasn't been 'inserted' after imposed_occluded.)
       int mycolor = color[ijk[2]][ijk[1]][ijk[0]];
       if(mycolor<0) {
