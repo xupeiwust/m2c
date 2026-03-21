@@ -652,17 +652,17 @@ M2CTwinMessenger::CommunicateBeforeTimeStepping(SpaceVariable3D &coordinates_, D
                         tag[k][j-1][i]==1 || tag[k][j+1][i]==1 ||
                         tag[k-1][j][i]==1 || tag[k+1][j][i]==1); //adjacet to red box?
           if(!green) {
-            if( (coordinates->IsHere(i-1,j,k) && 
+            if( (coordinates->IsHereOrInternalGhost(i-1,j,k) &&
                  !global_mesh_twin.IsPointInDomain(coords[k][j][i-1], false)) ||
-                (coordinates->IsHere(i+1,j,k) && 
+                (coordinates->IsHereOrInternalGhost(i+1,j,k) &&
                  !global_mesh_twin.IsPointInDomain(coords[k][j][i+1], false)) ||
-                (coordinates->IsHere(i,j-1,k) && 
+                (coordinates->IsHereOrInternalGhost(i,j-1,k) &&
                  !global_mesh_twin.IsPointInDomain(coords[k][j-1][i], false)) ||
-                (coordinates->IsHere(i,j+1,k) && 
+                (coordinates->IsHereOrInternalGhost(i,j+1,k) &&
                  !global_mesh_twin.IsPointInDomain(coords[k][j+1][i], false)) ||
-                (coordinates->IsHere(i,j,k-1) && 
+                (coordinates->IsHereOrInternalGhost(i,j,k-1) &&
                  !global_mesh_twin.IsPointInDomain(coords[k-1][j][i], false)) ||
-                (coordinates->IsHere(i,j,k+1) && 
+                (coordinates->IsHereOrInternalGhost(i,j,k+1) &&
                  !global_mesh_twin.IsPointInDomain(coords[k+1][j][i], false)) )
               green = true; //adjacent to a real node outside leader's domain
           } 
@@ -680,7 +680,7 @@ M2CTwinMessenger::CommunicateBeforeTimeStepping(SpaceVariable3D &coordinates_, D
             // block adjacent edges (6 of them) --- to verify that the green boxes 
             // form a closed surface
             xx[k][j][i] = Vec3D(1,1,1); 
-            xx[k+1][j][i][2] = xx[k][j+1][i][1] = xx[k][j][i+1][1] = 1;
+            xx[k+1][j][i][2] = xx[k][j+1][i][1] = xx[k][j][i+1][0] = 1;
 
           } else
             id[k][j][i] = INACTIVE_MATERIAL_ID;

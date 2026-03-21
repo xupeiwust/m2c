@@ -58,6 +58,7 @@ From the `Restart` directory, run:
 ```bash
 mpiexec -n 2 [path-to-m2c-executable] input.st
 ```
+> **Note:** When running the restart simulation, you still need access to the VTK library.
 
 The `input.st` file is nearly identical to that of the initial run, except it specifies the **user-defined initial condition**.
 
