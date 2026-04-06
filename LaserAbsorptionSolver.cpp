@@ -1687,31 +1687,30 @@ LaserAbsorptionSolver::SetSourceRadiance(double*** l, Vec3D*** coords, double t)
     double PI = 2.0*acos(0.0);
  
     //Adjust laser power because of Gaussian distribution
-    double dx = 0.000001; 
-    int IN = source.radius/dx;
-    double Power_integrated = 0.0;
-    for(int i = 0; i < IN; i++){
-      double x = (i+1)*dx;
-      double lx = (2.0*power/(PI*beamwaist*beamwaist))*exp(-2.0*x*x/(beamwaist*beamwaist));
-      double area = 2*PI*x*dx;
-      Power_integrated = Power_integrated + lx*area;
+    assert(source.radius>0.0);
+    double dx = 0.0001*source.radius; 
+    int Nint = source.radius/dx;
+    double power_integrated = 0.0;
+    double x, lx, area;
+    for(int i = 0; i < Nint; i++){
+      x = (i+1)*dx;
+      lx = (2.0*power/(PI*beamwaist*beamwaist))*exp(-2.0*x*x/(beamwaist*beamwaist));
+      area = 2*PI*x*dx;
+      power_integrated += lx*area;
     }
-    double adjust_ratio = Power_integrated/power;
+    double adjust_ratio = power_integrated/power;
     double power_old = power;
-    //fprintf(stdout,"The laser power is %e at time %e s, and the adjust ratio for laser power is: %e.\n", power, t, adjust_ratio);
     power = power/adjust_ratio;
     //Check if the ratio is computed correct
     double power_checked = 0.0;
-    for(int i = 0; i < IN; i++){
-      double x = (i+1)*dx;
-      double lx = (2.0*power/(PI*beamwaist*beamwaist))*exp(-2.0*x*x/(beamwaist*beamwaist));
-      double area = 2*PI*x*dx;
-      power_checked = power_checked + lx*area;
+    for(int i = 0; i < Nint; i++){
+      x = (i+1)*dx;
+      lx = (2.0*power/(PI*beamwaist*beamwaist))*exp(-2.0*x*x/(beamwaist*beamwaist));
+      area = 2*PI*x*dx;
+      power_checked += lx*area;
     }
-    double ratio_constant = power_checked/power_old;
-    if(abs(ratio_constant - 1.0)>1e-6)
-        print(comm, "Warning: adjust ratio for laser power is computed uncorrectedly");
-
+    if(fabs(power_checked/power_old - 1.0)>1e-6)
+      print_warning(comm, "Warning: adjustment ratio for laser power is computed uncorrectedly");
 
     for(int n=0; n<queueCounter[0]; n++) {//level 0
       int i(sortedNodes[n].i), j(sortedNodes[n].j), k(sortedNodes[n].k);
