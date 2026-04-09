@@ -514,6 +514,18 @@ IntegrationOutput::WriteIntegrationResults(double time, double dt, int time_step
   if(files.empty()) //nothing to write
     return;
 
+  // need to write any of the files?
+  bool need_to_write = false;
+  for(unsigned i=0; i<files.size(); i++) {
+    if(!isTimeToWrite(time, dt, time_step, frequency_dt[i], frequency[i], last_snapshot_time[i], force_write)) {
+      need_to_write = true;
+      break;
+    }
+  }
+  if(!need_to_write)
+    return;
+
+
   // Get data
   double***   tag = Tag.GetDataPointer();
   Vec5D***      v = (Vec5D***)V.GetDataPointer();
@@ -541,8 +553,10 @@ IntegrationOutput::WriteIntegrationResults(double time, double dt, int time_step
   int index = 0;
   for(auto&& file : files) {
     if(!isTimeToWrite(time, dt, time_step, frequency_dt[index], frequency[index], last_snapshot_time[index],
-                      force_write))
+                      force_write)) {
+      index++;
       continue;
+    }
 
     if(file[IntegrationData::VOLUME]) {
       print(file[IntegrationData::VOLUME], "%10d    %16.14e    ", time_step, time);
