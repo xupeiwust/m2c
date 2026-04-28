@@ -987,6 +987,11 @@ MultiPhaseOperator::UpdateStateVariablesByRiemannSolutions(SpaceVariable3D &IDn,
   double*** id  = (double***)ID.GetDataPointer();
   Vec5D***  v   = (Vec5D***) V.GetDataPointer();
 
+  // extract latent heat (if relevant)
+  double*** lam = (trans.size()>0 && iod.multiphase.latent_heat_transfer==MultiPhaseData::REPLENISH)
+                ? Lambda.GetDataPointer() : nullptr;
+  int lambda_updated = 0; //if not updated by the end, no need to sync data across subdomains
+
   // create a vector that temporarily stores unresolved nodes (which will be resolved separately)
   vector<Int3> unresolved;
 
@@ -1002,16 +1007,38 @@ MultiPhaseOperator::UpdateStateVariablesByRiemannSolutions(SpaceVariable3D &IDn,
         if(id[k][j][i] == INACTIVE_MATERIAL_ID)
           continue;
 
+        //-------------------------------------------------------------------------------------
+        // for replenishing e with lambda
+        double e0 = (lam && lam[k][j][i]>0.0 && idn[k][j][i]!=INACTIVE_MATERIAL_ID) ?
+                    varFcn[idn[k][j][i]]->GetInternalEnergyPerUnitMass(v[k][j][i][0], v[k][j][i][4])
+                  : 0.0;
+        //-------------------------------------------------------------------------------------
+
         counter = LocalUpdateByRiemannSolutions(i, j, k, id[k][j][i], v[k][j][i-1], v[k][j][i+1], 
                       v[k][j-1][i], v[k][j+1][i], v[k-1][j][i], v[k+1][j][i], riemann_solutions,
                       v[k][j][i], true);
+
         if(counter==0)
           counter = LocalUpdateByRiemannSolutions(i, j, k, id[k][j][i], v[k][j][i-1], v[k][j][i+1], 
-              v[k][j-1][i], v[k][j+1][i], v[k-1][j][i], v[k+1][j][i], riemann_solutions,
-              v[k][j][i], false);
+                        v[k][j-1][i], v[k][j+1][i], v[k-1][j][i], v[k+1][j][i], riemann_solutions,
+                        v[k][j][i], false);
 
-        if(counter==0) //add it to unresolved nodes...
+        if(counter==0) {//add it to unresolved nodes...
           unresolved.push_back(Int3(k,j,i)); //note the order: k,j,i
+          continue;
+        }
+
+        //-------------------------------------------------------------------------------------
+        if(lam && lam[k][j][i]>0.0) {
+          double e = varFcn[id[k][j][i]]->GetInternalEnergyPerUnitMass(v[k][j][i][0], v[k][j][i][4]);
+          if(e < e0 + lam[k][j][i]) {
+            e = e0 + lam[k][j][i]; //replenish
+            v[k][j][i][4] = varFcn[id[k][j][i]]->GetPressure(v[k][j][i][0], e);
+          }
+          lam[k][j][i] = 0.0;
+          lambda_updated = 1;
+        } 
+        //-------------------------------------------------------------------------------------
 
       }  
 
@@ -1020,6 +1047,13 @@ MultiPhaseOperator::UpdateStateVariablesByRiemannSolutions(SpaceVariable3D &IDn,
   ID.RestoreDataPointerToLocalVector();
   IDn.RestoreDataPointerToLocalVector();
 
+  if(lam) {
+    MPI_Allreduce(MPI_IN_PLACE, &lambda_updated, 1, MPI_INT, MPI_MAX, comm);
+    if(lambda_updated>0)
+      Lambda.RestoreDataPointerAndInsert();
+    else
+      Lambda.RestoreDataPointerToLocalVector();
+  }
 
   // Fix the unresolved nodes (if any)
   int nUnresolved = unresolved.size();
@@ -1163,6 +1197,11 @@ MultiPhaseOperator::UpdateStateVariablesByExtrapolation(SpaceVariable3D &IDn,
 
   Vec3D*** coords = (Vec3D***)coordinates.GetDataPointer();
 
+  // extract latent heat (if relevant)
+  double*** lam = (trans.size()>0 && iod.multiphase.latent_heat_transfer==MultiPhaseData::REPLENISH)
+                ? Lambda.GetDataPointer() : nullptr;
+  int lambda_updated = 0; //if not updated by the end, no need to sync data across subdomains
+
   double weight, sum_weight;
   Vec5D vsum;
   Vec3D v1, x1x0;
@@ -1251,14 +1290,40 @@ MultiPhaseOperator::UpdateStateVariablesByExtrapolation(SpaceVariable3D &IDn,
                       "by extrapolation w/ upwinding.\n\033[0m", i,j,k, x0[0],x0[1],x0[2]);
           }
           unresolved.push_back(Int3(k,j,i)); //note the order: k,j,i          
-        } else
-          v[k][j][i] = vsum/sum_weight; 
+        }
+        else {
+          if(lam && lam[k][j][i]>0.0) { //may need to add lambda to e
+            double e0 = idn[k][j][i]==INACTIVE_MATERIAL_ID ? 0.0 :
+                varFcn[idn[k][j][i]]->GetInternalEnergyPerUnitMass(v[k][j][i][0], v[k][j][i][4]);
+
+            v[k][j][i] = vsum/sum_weight; 
+
+            double e = varFcn[id[k][j][i]]->GetInternalEnergyPerUnitMass(v[k][j][i][0], v[k][j][i][4]);
+            if(e < e0 + lam[k][j][i]) {
+              e = e0 + lam[k][j][i]; //replenish
+              v[k][j][i][4] = varFcn[id[k][j][i]]->GetPressure(v[k][j][i][0], e);
+            }
+
+            lam[k][j][i] = 0.0;
+            lambda_updated = 1; //i.e., true
+          }
+          else
+            v[k][j][i] = vsum/sum_weight; 
+        }
       }
 
   V.RestoreDataPointerAndInsert(); //insert data & communicate with neighbor subd's
   ID.RestoreDataPointerToLocalVector();
   IDn.RestoreDataPointerToLocalVector();
   coordinates.RestoreDataPointerToLocalVector();
+
+  if(lam) {
+    MPI_Allreduce(MPI_IN_PLACE, &lambda_updated, 1, MPI_INT, MPI_MAX, comm);
+    if(lambda_updated>0)
+      Lambda.RestoreDataPointerAndInsert();
+    else
+      Lambda.RestoreDataPointerToLocalVector();
+  }
 
 
   // Fix the unresolved nodes (if any)
@@ -1293,6 +1358,10 @@ MultiPhaseOperator::FixUnresolvedNodes(vector<Int3> &unresolved, SpaceVariable3D
 
   Vec3D*** coords = (Vec3D***)coordinates.GetDataPointer();
 
+  // extract latent heat (if relevant)
+  double*** lam = (trans.size()>0 && iod.multiphase.latent_heat_transfer==MultiPhaseData::REPLENISH)
+                ? Lambda.GetDataPointer() : nullptr;
+  int lambda_updated = 0; //if not updated by the end, no need to sync data across subdomains
 
   // loop through unresolved nodes
   int i,j,k;
@@ -1301,8 +1370,6 @@ MultiPhaseOperator::FixUnresolvedNodes(vector<Int3> &unresolved, SpaceVariable3D
   Vec5D vtmp;
   Vec3D v1, x1x0;
   double v1norm, x1x0norm;
-
-  bool reset = false; //whether v[k][j][i] has been reset
 
   int nStillUnresolved = 0;
 
@@ -1319,6 +1386,13 @@ MultiPhaseOperator::FixUnresolvedNodes(vector<Int3> &unresolved, SpaceVariable3D
     sum_weight = 0.0;
     sum_weight2 = 0.0;
     vtmp = 0.0;
+
+    bool reset = false; //whether v[k][j][i] has been reset
+
+    double e0(0.0), e(0.0);  //may need to replenish e
+    if(lam && lam[k][j][i]>0.0 && idn[k][j][i]!=INACTIVE_MATERIAL_ID)
+      e0 = varFcn[idn[k][j][i]]->GetInternalEnergyPerUnitMass(v[k][j][i][0], v[k][j][i][4]);
+
 
     //go over the neighboring nodes 
     for(int neighk = k-1; neighk <= k+1; neighk++)         
@@ -1395,24 +1469,53 @@ MultiPhaseOperator::FixUnresolvedNodes(vector<Int3> &unresolved, SpaceVariable3D
 
     if(iod.multiphase.phasechange_dir == MultiPhaseData::UPWIND) {
       if(sum_weight>0) {
+
         v[k][j][i] /= sum_weight; //Done!
-        if(verbose>1) fprintf(stdout,"*** (%d,%d,%d): Updated state variables by extrapolation w/ upwinding. (2nd attempt)\n",
-                              i,j,k);
+
+        if(lam && lam[k][j][i]>0.0) { //may need to add lambda to e
+          e = varFcn[id[k][j][i]]->GetInternalEnergyPerUnitMass(v[k][j][i][0], v[k][j][i][4]);
+          if(e < e0 + lam[k][j][i]) {
+            e = e0 + lam[k][j][i]; //replenish
+            v[k][j][i][4] = varFcn[id[k][j][i]]->GetPressure(v[k][j][i][0], e);
+          }
+
+          lam[k][j][i] = 0.0;
+          lambda_updated = 1; //i.e., true
+        }
+
+        if(verbose>1)
+          fprintf(stdout,"*** Node (%d,%d,%d): Updated state variables by extrapolation w/ upwinding. "
+                  "(2nd attempt)\n", i,j,k);
         continue;
       }
     }
 
     // if still unresolved, try to apply an averaging w/o     
     if(sum_weight2>0) {
+
       v[k][j][i] = vtmp/sum_weight2; //Done!
-      if(verbose>1) fprintf(stdout,"*** (%d,%d,%d): Updated state variables by extrapolation w/o enforcing upwinding."
-                            " (2nd attempt)\n", i,j,k);
+
+      if(lam && lam[k][j][i]>0.0) { //may need to add lambda to e
+        e = varFcn[id[k][j][i]]->GetInternalEnergyPerUnitMass(v[k][j][i][0], v[k][j][i][4]);
+        if(e < e0 + lam[k][j][i]) {
+          e = e0 + lam[k][j][i]; //replenish
+          v[k][j][i][4] = varFcn[id[k][j][i]]->GetPressure(v[k][j][i][0], e);
+        }
+
+        lam[k][j][i] = 0.0;
+        lambda_updated = 1; //i.e., true
+      }
+
+
+      if(verbose>1)
+        fprintf(stdout,"*** Node (%d,%d,%d): Updated state variables by extrapolation w/o "
+                "enforcing upwinding. (2nd attempt)\n", i,j,k);
       continue;
     }
 
     // Our last resort: keep the pressure and velocity (both normal & TANGENTIAL) at the current node, 
-    // find a valid density nearby. (In this case, the solution may be different for different domain
-    // partitions --- but this should rarely happen. Also, we are no longer rigorously checking intersections...)
+    // find a valid density nearby. In this case, the solution may be different for different domain
+    // partitions --- but this should rarely happen. Also, we are no longer rigorously checking intersections.
           
     //go over the neighboring nodes & interpolate velocity and pressure
     int max_layer = 10;
@@ -1427,8 +1530,8 @@ MultiPhaseOperator::FixUnresolvedNodes(vector<Int3> &unresolved, SpaceVariable3D
               continue; //this neighbor is outside the physical domain. Skip.
   
             if(!ID.IsHere(neighi,neighj,neighk,true/*include_ghost*/))
-              continue; //this neighbor is outside the current subdomain (TODO: Hence, different subdomain partitions
-                        //may affect the results. This can be fixed in future)
+              continue; //this neighbor is outside the current subdomain (TODO: Hence, different subdomain
+                        //partitions may affect the results. This can be fixed in future)
 
             if(id[neighk][neighj][neighi] != id[k][j][i])
               continue; //this neighbor has a different ID. Skip it.
@@ -1469,8 +1572,22 @@ MultiPhaseOperator::FixUnresolvedNodes(vector<Int3> &unresolved, SpaceVariable3D
 
       if(sum_weight>0) {
         v[k][j][i][0] = density/sum_weight;
-        if(verbose>1) fprintf(stdout,"*** (%d,%d,%d): Updated density by interpolation w/ stencil width = %d: %e %e %e %e %e\n",
-                            i,j,k, layer, v[k][j][i][0], v[k][j][i][1], v[k][j][i][2], v[k][j][i][3], v[k][j][i][4]);
+
+        if(lam && lam[k][j][i]>0.0) { //may need to add lambda to e
+          e = varFcn[id[k][j][i]]->GetInternalEnergyPerUnitMass(v[k][j][i][0], v[k][j][i][4]);
+          if(e < e0 + lam[k][j][i]) {
+            e = e0 + lam[k][j][i]; //replenish
+            v[k][j][i][4] = varFcn[id[k][j][i]]->GetPressure(v[k][j][i][0], e);
+          }
+
+          lam[k][j][i] = 0.0;
+          lambda_updated = 1; //i.e., true
+        }
+
+        if(verbose>1)
+          fprintf(stdout,"*** (%d,%d,%d): Updated density by interpolation w/ stencil width = "
+                  "%d: %e %e %e %e %e\n", i,j,k, layer, v[k][j][i][0], v[k][j][i][1], v[k][j][i][2],
+                  v[k][j][i][3], v[k][j][i][4]);
         break; //done with this node
       }
 
@@ -1484,15 +1601,30 @@ MultiPhaseOperator::FixUnresolvedNodes(vector<Int3> &unresolved, SpaceVariable3D
       //Treatment 2: apply a constant density.
 
       if(id[k][j][i]!=0 || apply_failsafe_density) {
-        fprintf(stdout,"\033[0;35mWarning: Updating phase change at (%d,%d,%d)(%e,%e,%e) with pre-specified density (%e). "
+        fprintf(stdout,"\033[0;35mWarning: Updating phase change at (%d,%d,%d)(%e,%e,%e) with "
+                       "pre-specified density (%e). "
                        "Id:%d->%d. No valid neighbors within %d layers.\033[0m\n", 
                        i,j,k, coords[k][j][i][0], coords[k][j][i][1],
-                       coords[k][j][i][2], varFcn[id[k][j][i]]->failsafe_density, (int)idn[k][j][i], (int)id[k][j][i], 
-                       max_layer);
+                       coords[k][j][i][2], varFcn[id[k][j][i]]->failsafe_density, (int)idn[k][j][i],
+                       (int)id[k][j][i], max_layer);
         v[k][j][i][0] = varFcn[id[k][j][i]]->failsafe_density;
-      } else { //id[k][j][i] = 0 && not applying failsafe
+
+        if(lam && lam[k][j][i]>0.0) { //may need to add lambda to e
+          e = varFcn[id[k][j][i]]->GetInternalEnergyPerUnitMass(v[k][j][i][0], v[k][j][i][4]);
+          if(e < e0 + lam[k][j][i]) {
+            e = e0 + lam[k][j][i]; //replenish
+            v[k][j][i][4] = varFcn[id[k][j][i]]->GetPressure(v[k][j][i][0], e);
+          }
+
+          lam[k][j][i] = 0.0;
+          lambda_updated = 1; //i.e., true
+        }
+
+      }
+      else { //id[k][j][i] = 0 && not applying failsafe
         fprintf(stdout,"\033[0;35mWarning: Updating phase change at (%d,%d,%d)(%e,%e,%e). "
-                       "Id:%d->%d. No valid neighbors within %d layers. Trying to correct the level set functions\033[0m\n", 
+                       "Id:%d->%d. No valid neighbors within %d layers. Trying to correct the level set "
+                       "functions\033[0m\n", 
                        i,j,k, coords[k][j][i][0], coords[k][j][i][1],
                        coords[k][j][i][2], (int)idn[k][j][i], (int)id[k][j][i], max_layer);
         still_unresolved.push_back(Int3(k,j,i)); //order: k,j,i
@@ -1512,6 +1644,13 @@ MultiPhaseOperator::FixUnresolvedNodes(vector<Int3> &unresolved, SpaceVariable3D
   IDn.RestoreDataPointerToLocalVector();
   coordinates.RestoreDataPointerToLocalVector();
 
+  if(lam) {
+    MPI_Allreduce(MPI_IN_PLACE, &lambda_updated, 1, MPI_INT, MPI_MAX, comm);
+    if(lambda_updated>0)
+      Lambda.RestoreDataPointerAndInsert();
+    else
+      Lambda.RestoreDataPointerToLocalVector();
+  }
 
   return nStillUnresolved; //if the failsafe strategy has been applied, this will always be 0
 
@@ -2061,12 +2200,14 @@ MultiPhaseOperator::UpdateLevelSetsInUnresolvedCells(vector<SpaceVariable3D*> &P
 
 void
 MultiPhaseOperator::AddLambdaToInternalEnergyAfterInterfaceMotion(double dt,
-                                                                  SpaceVariable3D &IDn, SpaceVariable3D &ID, 
-                                                                  SpaceVariable3D &V)
+                        SpaceVariable3D &IDn, SpaceVariable3D &ID, SpaceVariable3D &V)
 {
 
   if(trans.size()==0)
     return; //nothing to do
+
+  if(iod.multiphase.latent_heat_transfer==MultiPhaseData::REPLENISH) 
+    return; //latent_heat added during phase change
 
   double*** idn = IDn.GetDataPointer();
   double*** id  = ID.GetDataPointer();
@@ -2096,7 +2237,7 @@ MultiPhaseOperator::AddLambdaToInternalEnergyAfterInterfaceMotion(double dt,
           if((*it)->ToID() != myid)
             continue;
 
-          if(iod.multiphase.latent_heat_transfer!=MultiPhaseData::On) {//should reset lam to 0
+          if(iod.multiphase.latent_heat_transfer==MultiPhaseData::OFF) {//should reset lam to 0
             lam[k][j][i] = 0.0;
             break;
           }

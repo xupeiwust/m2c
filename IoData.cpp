@@ -1709,7 +1709,7 @@ MultiPhaseData::MultiPhaseData()
 
   riemann_normal = MESH;
 
-  latent_heat_transfer = On;
+  latent_heat_transfer = ON; //may be modified later (KW,04/2026)
 
   levelset_correction_frequency = -1;
 
@@ -1754,8 +1754,8 @@ void MultiPhaseData::setup(const char *name, ClassAssigner *father)
 
   new ClassToken<MultiPhaseData>
     (ca, "LatentHeatTransfer", this,
-     reinterpret_cast<int MultiPhaseData::*>(&MultiPhaseData::latent_heat_transfer), 2,
-     "Off", 0, "On", 1);
+     reinterpret_cast<int MultiPhaseData::*>(&MultiPhaseData::latent_heat_transfer), 3,
+     "Off", 0, "On", 1, "Replenish", 2); 
 
   new ClassInt<MultiPhaseData>(ca, "LevelSetCorrectionFrequency", 
         this, &MultiPhaseData::levelset_correction_frequency);

@@ -903,18 +903,24 @@ struct MultiPhaseData {
 
   enum RiemannNormal {LEVEL_SET = 0, MESH = 1, AVERAGE = 2} riemann_normal;
 
-  enum OnOff {Off = 0, On = 1};
-  OnOff latent_heat_transfer; //!< whether stored latent heat would be added to the enthalpy
-                              //Note: In the case of a "physical" phase transition, the
-                              //      latent heat is always added to the enthalpy. The option here
-                              //      is about whether this operation will be done if a phase
-                              //      change occurs due to the motion of material interface(s).
+  enum LatentHeatTransfer {OFF = 0, ON = 1, REPLENISH = 2} latent_heat_transfer;
+  /*!
+   * \brief Treatment of latent heat during phase change due to interface motion.
+   * Options:
+   * - OFF : latent heat is ignored.
+   * - ON : latent heat is added to internal energy.
+   * - REPLENISH : latent heat is directly used to update \c e (and \c p).
+   * \note In the case of a physical phase transition, latent heat is always added to the enthalpy.
+   * The option here controls whether this operation is also performed when phase change occurs due
+   * to the motion of material interface(s).
+   */
 
   int levelset_correction_frequency; //!< frequency of eliminating small gaps or inconsistencies
                                      //   between multiple level set functions
                                      
   int corrections_until_reinit; //!< reinit. level-set after N (default=1) corrections
 
+  enum OnOff {Off = 0, On = 1};
   OnOff apply_failsafe_density;
 
   MultiPhaseData();
