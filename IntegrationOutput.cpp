@@ -517,7 +517,7 @@ IntegrationOutput::WriteIntegrationResults(double time, double dt, int time_step
   // need to write any of the files?
   bool need_to_write = false;
   for(unsigned i=0; i<files.size(); i++) {
-    if(!isTimeToWrite(time, dt, time_step, frequency_dt[i], frequency[i], last_snapshot_time[i], force_write)) {
+    if(isTimeToWrite(time, dt, time_step, frequency_dt[i], frequency[i], last_snapshot_time[i], force_write)) {
       need_to_write = true;
       break;
     }
